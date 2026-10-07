@@ -1,4 +1,4 @@
-const CACHE_NAME = "muscle-foundation-v5";
+const CACHE_NAME = "muscle-foundation-v6";
 const BASE = new URL("./", self.location).pathname;
 const APP_SHELL = [BASE, BASE + "manifest.webmanifest", BASE + "icons/icon.svg"];
 

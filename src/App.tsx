@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { EXERCISES, searchExercises } from "./data/exercises";
+import { GUIDE_SOURCE } from "./data/guideLinks";
 import { getWorkout, PROGRAM } from "./data/program";
 import { exportData, importData, loadState, resetState, saveState } from "./services/storage";
 import {
@@ -486,7 +487,10 @@ function ExerciseDetail({ exercise, state }: { exercise: (typeof EXERCISES)[numb
       <p className="detail-description">{exercise.description}</p>
       <div className="detail-facts"><div><span>PRIMARY</span><strong>{exercise.primary}</strong></div><div><span>SECONDARY</span><strong>{exercise.secondary}</strong></div><div><span>EQUIPMENT</span><strong>{exercise.equipment}</strong></div></div>
       <h3>Form reminders <span className="supplemental">(supplemental)</span></h3><ul className="cue-list">{exercise.cues.map((cue) => <li key={cue}>{cue}</li>)}</ul>
-      <p className="image-attribution">Image: {exercise.imageSource}</p>
+      {exercise.guide?.url
+        ? <a className="guide-link" href={exercise.guide.url} target="_blank" rel="noopener noreferrer">View demo on Simply Fitness: {exercise.guide.guideName} ↗{exercise.guide.matchType === "close" && " (similar movement)"}</a>
+        : <p className="image-attribution">No Simply Fitness guide found for this exercise.</p>}
+      <p className="image-attribution">Exercise guides: {GUIDE_SOURCE.name}. Opens online; not available offline.</p>
     </section>
     <section className="panel exercise-usage"><span className="eyebrow">PROGRAM APPEARANCES</span><h3>In your plan</h3><p className="usage-text">{exercise.usage}</p>
       <div className="section-title"><h3>Recent history</h3><span className="tag">{history.length} SESSIONS</span></div>
