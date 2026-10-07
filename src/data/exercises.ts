@@ -1,7 +1,8 @@
 import { ALL_EXERCISE_IDS, PROGRAM, getExercise } from "./program";
-import { GUIDE_LINKS, type GuideLink } from "./guideLinks";
+import { EXERCISE_IMAGES, type ExerciseImage } from "./exerciseImages";
 
 const norm = (value: string) => value.toLocaleLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const IMAGE_BY_NAME = new Map(Object.entries(EXERCISE_IMAGES).map(([name, image]) => [norm(name), image]));
 
 const aliases: Record<string, string> = {
   "overheard-tricep-extension": "Overhead Tricep Extension",
@@ -65,7 +66,7 @@ export interface ExerciseReference {
   cues: string[];
   usage: string;
   imageSource: string;
-  guide?: GuideLink;
+  image?: ExerciseImage;
 }
 
 export const EXERCISES: ExerciseReference[] = ALL_EXERCISE_IDS.map((id) => {
@@ -85,8 +86,8 @@ export const EXERCISES: ExerciseReference[] = ALL_EXERCISE_IDS.map((id) => {
     description: `${record.sourceName} is included in the source program. Technique details here are supplemental reference information, not part of the PDF prescription.`,
     cues: ["Use a controlled range of motion.", "Choose a stable, comfortable position.", "Stop if you feel sharp pain."],
     usage,
-    imageSource: "No licensed local image included; exercise placeholder used.",
-    guide: GUIDE_LINKS.find((link) => norm(link.programName) === norm(record.sourceName))
+    imageSource: "free-exercise-db (Unlicense / public domain)",
+    image: IMAGE_BY_NAME.get(norm(record.sourceName))
   };
 });
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = "muscle-foundation-v6";
+const CACHE_NAME = "muscle-foundation-v7";
 const BASE = new URL("./", self.location).pathname;
 const APP_SHELL = [BASE, BASE + "manifest.webmanifest", BASE + "icons/icon.svg"];
 
@@ -11,6 +11,9 @@ self.addEventListener("install", (event) => {
     await cache.put(BASE, response);
     await cache.addAll([...APP_SHELL.slice(1), ...assets]);
     await self.skipWaiting();
+    fetch(BASE + "exercises/manifest.json").then((res) => res.json())
+      .then((files) => Promise.all(files.map((file) => cache.add(BASE + file).catch(() => undefined))))
+      .catch(() => undefined);
   })());
 });
 

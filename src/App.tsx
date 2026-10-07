@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { EXERCISES, searchExercises } from "./data/exercises";
-import { GUIDE_SOURCE } from "./data/guideLinks";
+import { IMAGE_SOURCE, imageUrls } from "./data/exerciseImages";
 import { getWorkout, PROGRAM } from "./data/program";
 import { exportData, importData, loadState, resetState, saveState } from "./services/storage";
 import {
@@ -448,6 +448,8 @@ function ExercisesView({
     (!usedThisWeek || thisWeekIds.has(exercise.id))
   ), [query, muscleFilter, equipmentFilter, usedThisWeek, state.program.currentWeek]);
   const selected = EXERCISES.find((exercise) => exercise.id === selectedExercise);
+  const [previewId, setPreviewId] = useState<string>();
+  const preview = EXERCISES.find((exercise) => exercise.id === previewId);
   return <div className="view-stack">
     <PageHeading kicker="MOVEMENT LIBRARY" title={selected ? selected.sourceName : "Exercise reference"}
       action={selected && <button className="text-button" onClick={() => setSelectedExercise(undefined)}>← All exercises</button>} />
@@ -461,8 +463,8 @@ function ExercisesView({
       <div className="results-count">{results.length} MOVEMENTS <span>· Alphabetical</span></div>
       <div className="exercise-grid">{results.map((exercise) => {
         const recent = getPreviousPerformance(state.workoutSessions, exercise.id);
-        return <button className="exercise-card panel" key={exercise.id} onClick={() => setSelectedExercise(exercise.id)}>
-          <ExerciseGlyph />
+        return <button className="exercise-card panel" key={exercise.id} onClick={() => setPreviewId(exercise.id)}>
+          {exercise.image ? <img className="exercise-thumb" src={imageUrls(exercise.image)[0]} alt="" loading="lazy" /> : <ExerciseGlyph />}
           <div><strong>{exercise.sourceName}</strong>{exercise.alias && <span className="alias">Alias: {exercise.alias}</span>}
             <span className="exercise-meta">{exercise.primary} · {exercise.equipment}</span>
             {recent ? <span className="recent-chip">LAST LOGGED · {formatWeight(recent.find((set) => set.completed)?.weight, state.settings.unit)}</span> : <span className="no-history">NO HISTORY YET</span>}
@@ -471,6 +473,36 @@ function ExercisesView({
       })}</div>
       {results.length === 0 && <EmptyMessage text="No exercise matches those filters." />}
     </>}
+    {preview && <ExercisePopup exercise={preview} onClose={() => setPreviewId(undefined)} onDetails={() => { setPreviewId(undefined); setSelectedExercise(preview.id); }} />}
+  </div>;
+}
+
+function ExerciseImages({ exercise, large }: { exercise: (typeof EXERCISES)[number]; large?: boolean }) {
+  const [step, setStep] = useState(0);
+  if (!exercise.image) return <div className="exercise-illustration large"><ExerciseGlyph /><span className="glyph-caption">NO IMAGE AVAILABLE</span></div>;
+  const urls = imageUrls(exercise.image);
+  return <figure className={`exercise-photos ${large ? "large" : ""}`}>
+    <button className="photo-frame" onClick={() => setStep(step === 0 ? 1 : 0)} aria-label={`Show ${step === 0 ? "end" : "start"} position`}>
+      <img src={urls[step]} alt={`${exercise.sourceName}, ${step === 0 ? "start" : "end"} position`} />
+      <span className="photo-tag">{step === 0 ? "START" : "END"} · TAP TO FLIP</span>
+    </button>
+    <figcaption>{exercise.image.similar ? `Similar movement: ${exercise.image.name}` : exercise.image.name}</figcaption>
+  </figure>;
+}
+
+function ExercisePopup({ exercise, onClose, onDetails }: { exercise: (typeof EXERCISES)[number]; onClose: () => void; onDetails: () => void }) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return <div className="popup-backdrop" onClick={onClose}>
+    <div className="popup-card panel" role="dialog" aria-modal="true" aria-label={exercise.sourceName} onClick={(event) => event.stopPropagation()}>
+      <div className="popup-head"><div><span className="eyebrow">{exercise.primary.toUpperCase()}</span><h2>{exercise.sourceName}</h2></div>
+        <button className="text-button" onClick={onClose} aria-label="Close">✕</button></div>
+      <ExerciseImages exercise={exercise} />
+      <button className="primary-button" onClick={onDetails}>Full details &amp; history</button>
+    </div>
   </div>;
 }
 
@@ -481,16 +513,13 @@ function ExerciseDetail({ exercise, state }: { exercise: (typeof EXERCISES)[numb
     .filter(({ session }) => session.completedAt)
     .sort((a, b) => b.session.startedAt.localeCompare(a.session.startedAt)).slice(0, 8);
   return <div className="detail-grid">
-    <section className="panel exercise-detail-main"><div className="exercise-illustration large"><ExerciseGlyph /></div>
+    <section className="panel exercise-detail-main"><ExerciseImages exercise={exercise} large />
       <span className="eyebrow">SOURCE NAME</span><h2>{exercise.sourceName}</h2>
       {exercise.alias && <p className="alias-note">Common alias: {exercise.alias} · Program spelling preserved</p>}
       <p className="detail-description">{exercise.description}</p>
       <div className="detail-facts"><div><span>PRIMARY</span><strong>{exercise.primary}</strong></div><div><span>SECONDARY</span><strong>{exercise.secondary}</strong></div><div><span>EQUIPMENT</span><strong>{exercise.equipment}</strong></div></div>
       <h3>Form reminders <span className="supplemental">(supplemental)</span></h3><ul className="cue-list">{exercise.cues.map((cue) => <li key={cue}>{cue}</li>)}</ul>
-      {exercise.guide?.url
-        ? <a className="guide-link" href={exercise.guide.url} target="_blank" rel="noopener noreferrer">View demo on Simply Fitness: {exercise.guide.guideName} ↗{exercise.guide.matchType === "close" && " (similar movement)"}</a>
-        : <p className="image-attribution">No Simply Fitness guide found for this exercise.</p>}
-      <p className="image-attribution">Exercise guides: {GUIDE_SOURCE.name}. Opens online; not available offline.</p>
+      <p className="image-attribution">Images: <a href={IMAGE_SOURCE.url} target="_blank" rel="noopener noreferrer">{IMAGE_SOURCE.name}</a> · {IMAGE_SOURCE.license}</p>
     </section>
     <section className="panel exercise-usage"><span className="eyebrow">PROGRAM APPEARANCES</span><h3>In your plan</h3><p className="usage-text">{exercise.usage}</p>
       <div className="section-title"><h3>Recent history</h3><span className="tag">{history.length} SESSIONS</span></div>
